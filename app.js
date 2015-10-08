@@ -1,14 +1,14 @@
 var express = require('express')
     , app = express()
+    , router = express.Router()
     , swig = require('swig')
     , cookieParser = require('cookie-parser')
     , bodyParser = require('body-parser')
     , compression = require('compression')
     , config = require('./lib/config')
-    , path = require('path')
-    , env = process.env.NODE_ENV || 'development';
+    , path = require('path');
 
-config.configure(env);
+config.configure(process.env.NODE_ENV || 'development');
 app.engine('html', swig.renderFile);
 app.set('view cache', false);
 
@@ -28,21 +28,22 @@ app.use(express.static(path.join(__dirname, '../', config.get('staticContentPath
 }));
 
 app.use(function(req, res, next) {
-    res.locals.env = process.env.NODE_ENV || 'development';
-    res.locals.root = config.get('root');
-    res.locals.port = config.get('port');
-    res.locals.siteName = config.get('siteName');
+    res.locals = config.getCurrent();
     next();
 });
 
-// You would probably want to seperate routes and middleware into seperate files
-app.get('/', require('./lib/templates/views/index'));
-app.get('/1', require('./lib/templates/views/page1'));
-app.get('/2', require('./lib/templates/views/page2'));
+// For a realworld app, you would probably want to seperate app, routes and middleware into seperate files
+router.get('/', require('./lib/templates/views/index'));
+router.get('/1', require('./lib/templates/views/page1'));
+router.get('/2', require('./lib/templates/views/page2'));
+
+app.use(config.get('baseUrl'), router);
 
 app.get('*', function(req, res, next){
     var err = new Error();
-    err.status = 404;
+        err.status = 404;
+        err.url = req.url;
+
     next(err);
 });
 
@@ -52,9 +53,12 @@ app.use(function(err, req, res, next){
         return next();
     }
 
-    res.render('errors/404');
+    res.render('errors/404', {
+        err: err
+    });
 });
 
 var server = app.listen(config.get('port'), function() {
     console.info('server running: ' + JSON.stringify(server.address()));
+    console.log('env: ' + process.env.NODE_ENV);
 });
