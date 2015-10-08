@@ -60,5 +60,5 @@ app.use(function(err, req, res, next){
 
 var server = app.listen(config.get('port'), function() {
     console.info('server running: ' + JSON.stringify(server.address()));
-    console.log('env: ' + process.env.NODE_ENV);
+    console.log('env: ' + config.get('env'));
 });
